@@ -2,14 +2,17 @@ import os, webbrowser
 
 class Probabilities_Grid():
     class __Node():
-        def __init__(self, cell):
+        def __init__(self, cell, probability=1, action_taken=None, actual_action=None):
             self.cell = cell
-            self.children = {}
+            self.children = []
+            self.probability = probability
+            self.action_taken = action_taken
+            self.actual_action = actual_action
             self.parent = None
 
-        def addChild(self, child, probability):
-            self.children[child] = probability
-            child.parent = self, probability
+        def add_child(self, child):
+            self.children.append(child) 
+            child.parent = self
     
     def __init__(self, rows, cols, terminal_states, blocked_states, init_cell, mv_ls, mv_map):
         self.rows, self.cols = rows, cols
@@ -19,7 +22,9 @@ class Probabilities_Grid():
         self.mv_ls = mv_ls
         self.mv_map = mv_map
         self.__grid = [[1 for j in range(self.cols)] for i in range(self.rows)]
+        self.grid = self.__grid
         self.__probabilities = [[0 for j in range(self.cols)] for i in range(self.rows)]
+        self.probabilities = self.__probabilities
         for x, y in self.blocked_states:
             self.__grid[y-1][x-1] = 0
         self.__node = self.__Node(self.init_cell)
@@ -27,7 +32,18 @@ class Probabilities_Grid():
         self.__fill_probabilities(self.__node)
         self.output_to_html(self.__get_puzzle_grid_string(), 'puzzle_grid')
         self.output_to_html(self.__get_probabilities_grid_string(), 'probabilities_grid')
-        self.output_to_html(self.__get_tree_string(self.__node), 'probabilities_tree')
+        tree_string = (self.__get_tree_string(self.__node) + '\n'*2 
+                       + 'Total Probabilities:' + '\n'*2 +  self.__get_probability_list_string())
+        self.output_to_html(tree_string, 'probabilities_tree')
+
+    def __get_probability_list_string(self):
+        probability_list_string = ''
+        for row in range(len(self.__probabilities)):
+            for col in range(len(self.__probabilities[row])):
+                x, y = col + 1, row + 1
+                cell = self.__probabilities[row][col]
+                probability_list_string += f'({x},{y}): {cell:.5f}' + '\n'
+        return probability_list_string.strip()
         
     def __move(self, curr, mv):
         x, y = curr
@@ -49,21 +65,21 @@ class Probabilities_Grid():
         if len(mv_ls) != 0 and node.cell not in terminal_states:
             next_mv = mv_ls.pop(0)
             for prob, mv in mv_map[next_mv]:
-                child = self.__Node(self.__move(node.cell, mv))
-                node.addChild(child, prob)
+                child = self.__Node(self.__move(node.cell, mv), prob, next_mv, mv)
+                node.add_child(child)
                 self.__propagate(child, mv_ls)
 
+    def __get_probability(self, leaf):
+        if leaf.parent is None: return leaf.probability       
+        return leaf.probability * self.__get_probability(leaf.parent)
+                
     def __fill_probabilities(self, node):
-        def get_probability(leaf):
-            if leaf.parent is None: return 1       
-            parent, prob = leaf.parent
-            return prob * get_probability(parent)
         if len(node.children) != 0:
-            for child, prob in node.children.items():
+            for child in node.children:
                 self.__fill_probabilities(child)
         else:
             x, y  = node.cell
-            self.__probabilities[y-1][x-1] += get_probability(node)
+            self.__probabilities[y-1][x-1] += self.__get_probability(node)
 
     def __get_puzzle_grid_string(self):
         string = ''
@@ -147,21 +163,25 @@ class Probabilities_Grid():
             return ''.join(['-' if left <= i <= right else ' ' for i in range(width)])
 
         def get_children_with_stems(children):
-            return [get_vertically_connected_block('', self.__get_tree_string(child), sep_text=str(round(prob, 2))) 
-                    for child, prob in children.items()]
+            return [get_vertically_connected_block('', self.__get_tree_string(child), 
+                                                   sep_text=(str(round(child.probability, 2)) 
+                                                             + f' ({child.actual_action})')) 
+                    for child in children]
 
-        if len(node.children) == 0: return str(node.cell)
+        if len(node.children) == 0: 
+            probability = self.__get_probability(node)
+            return get_vertically_connected_block(str(node.cell), f'{probability:.5f}', sep='')
+        action_taken = node.children[0].action_taken
         child_strings = get_children_with_stems(node.children)
-        if len(child_strings) == 1: return get_vertically_connected_block(str(node.cell), child_strings[0].cell, sep='')
         concatenated_children = get_horizontally_concatenated_blocks(child_strings)
         concatenated_children_with_bar = get_horizontal_bar(concatenated_children) + '\n' + concatenated_children
-        return get_vertically_connected_block(str(node.cell), concatenated_children_with_bar)
+        return get_vertically_connected_block(str(node.cell), concatenated_children_with_bar, sep_text=action_taken)
     
     def output_to_html(self, string, name):
         output_folder = 'probabilties_outputs'
         filename = f'{output_folder}/{name}.html'
         if not os.path.exists(output_folder): os.makedirs(output_folder)
-        if os.path.isfile(filename):
+        while os.path.isfile(filename):
             name = name + '_copy'
             filename = f'{output_folder}/{name}.html'            
         with open(f'{output_folder}/{name}.html','w') as f:                
