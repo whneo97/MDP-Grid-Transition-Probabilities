@@ -206,10 +206,10 @@ terminal_states = [(4, 2), (4, 3)]
 blocked_states = [(2, 2)]
 init_cell = (1, 1)
 mv_ls = ['RIGHT', 'RIGHT', 'RIGHT', 'UP', 'UP']
-mv_map = {'UP': [(0.8, 'UP'), (0.1, 'LEFT'), (0.1, 'RIGHT')], 
-          'DOWN': [(0.8, 'DOWN'), (0.1, 'LEFT'), (0.1, 'RIGHT')], 
-          'LEFT': [(0.8, 'LEFT'), (0.1, 'UP'), (0.1, 'DOWN')],
-          'RIGHT': [(0.8, 'RIGHT'), (0.1, 'UP'), (0.1, 'DOWN')]}
+mv_map = {'UP': [(0.1, 'LEFT'), (0.8, 'UP'), (0.1, 'RIGHT')], 
+          'DOWN': [(0.1, 'LEFT'), (0.8, 'DOWN'), (0.1, 'RIGHT')], 
+          'LEFT': [(0.1, 'UP'), (0.8, 'LEFT'), (0.1, 'DOWN')],
+          'RIGHT': [(0.1, 'UP'), (0.8, 'RIGHT'), (0.1, 'DOWN')]}
 
 Probabilities_Grid(rows, cols, terminal_states, blocked_states, init_cell, mv_ls, mv_map)
 
