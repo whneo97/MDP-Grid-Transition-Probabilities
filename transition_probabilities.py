@@ -179,6 +179,8 @@ class Probabilities_Grid():
             f.write(html_output)
             webbrowser.open('file://' + os.path.realpath(filename), new=2)
 
+# INPUTS
+
 rows, cols = 3, 4
 terminal_states = [(4, 2), (4, 3)]
 blocked_states = [(2, 2)]
